@@ -7,6 +7,7 @@ cur_seconds    = 0
 cur_loop       = 0
 last_text      = ""
 stop_text      = ""
+waiting_text   = "Break"
 activated      = false
 waiting        = false
 
@@ -19,6 +20,11 @@ function set_time_text()
 	local minutes       = math.floor(total_minutes % 60)
 	local hours         = math.floor(total_minutes / 60)
 	local text          = string.format("%02d:%02d:%02d", hours, minutes, seconds)
+
+	-- Add waiting text during breaks
+	if waiting == true then
+		text = text .. waiting_text
+	end
 
 	if cur_seconds < 1 then
 		text = stop_text
@@ -39,10 +45,8 @@ function set_time_text()
 end
 
 function timer_callback()
-    cur_seconds = cur_seconds - 1
+	cur_seconds = cur_seconds - 1
 
-    print(cur_seconds)
-    print(wait_duration);
     if cur_seconds < 1
     then
         print("zero timer!!!!")
@@ -52,15 +56,14 @@ function timer_callback()
             obs.remove_current_callback()
             cur_seconds = 0
         elseif waiting == false
-        then
-            print("Change to Waiting")
-            curr_seconds = curr_seconds + wait_seconds
+		then
+			cur_seconds = wait_seconds
             waiting = true
-            cur_loop = cur_loop - 1
+			print("Change to Waiting")
         elseif waiting == true
         then
             print("change to not waiting")
-            curr_seconds = curr_seconds + total_seconds
+            cur_seconds = total_seconds
             waiting = false
             cur_loop = cur_loop - 1
         end
@@ -77,7 +80,7 @@ function activate(activating)
 	activated = activating
 
 	if activating then
-        cur_seconds = total_seconds
+		cur_seconds = total_seconds
 		set_time_text()
 		obs.timer_add(timer_callback, 1000)
 	else
@@ -164,17 +167,18 @@ function script_update(settings)
 	activate(false)
 
 	total_seconds = obs.obs_data_get_int(settings, "duration") * 60
+	wait_seconds = obs.obs_data_get_int(settings, "wait_duration") * 60
 	source_name = obs.obs_data_get_string(settings, "source")
     stop_text = obs.obs_data_get_string(settings, "stop_text")
     cur_loop = obs.obs_data_get_int(settings, "loop_count")
-    wait_seconds = obs.obs_data_get_int(settings, "wait_duration") * 60
-
 	reset(true)
 end
 
 -- A function named script_defaults will be called to set the default settings
 function script_defaults(settings)
 	obs.obs_data_set_default_int(settings, "duration", 5)
+	obs.obs_data_set_default_int(settings, "loop_count", 1)
+	obs.obs_data_set_default_int(settings, "wait_duration", 1)
 	obs.obs_data_set_default_string(settings, "stop_text", "Starting soon (tm)")
 end
 
